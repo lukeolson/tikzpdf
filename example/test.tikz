@@ -1,0 +1,4 @@
+\begin{tikzpicture}
+  \draw (0,0) circle (2cm);
+  \node at (0,0) {Test4};
+\end{tikzpicture}
