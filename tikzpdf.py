@@ -138,7 +138,7 @@ def main():
     parser.add_argument("-p", "--preamble", default=None, help="latex preamble", metavar="preamble.tex")
     parser.add_argument("-w", "--watch", action="store_true", default=False, help="recompile on change")
     parser.add_argument("-v", "--view", action="store_true", default=False, help="open viewer")
-    parser.add_argument("--viewer", nargs=1, default='open', help="viewer executable")
+    parser.add_argument("--viewer", default='open', help="viewer executable")
 
     args = parser.parse_args()
 
