@@ -56,6 +56,7 @@ class tikz(object):
 \usepackage{pgfplots}
 \pagestyle{empty}
 \usepackage[active,tightpage]{preview}
+\renewcommand\PreviewBbAdjust{0bp 0bp 0bp 0bp}
 \PreviewEnvironment[]{tikzpicture}
 \usepackage[T1]{fontenc}
 """
