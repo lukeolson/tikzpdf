@@ -11,13 +11,14 @@ import sys
 import os
 import sys
 import time
+import shutil
 
 import tempfile
 import subprocess
 
 
 class tikz(object):
-    def __init__(self, tikzfile, preamblefile, watch, view, viewer):
+    def __init__(self, tikzfile, preamblefile, datafile, watch, view, viewer):
         self.tikzfile = tikzfile
         self.preamblefile = preamblefile
         self.pdffile = os.path.splitext(tikzfile)[0] + '.pdf'
@@ -27,10 +28,19 @@ class tikz(object):
         self.tikzpicture = ""
         self.preamble = ""
 
+        self.datafiles = []
+        if datafile is not None:
+            try:
+                with open(datafile, 'r') as f:
+                    d = f.read().strip().split('\n')
+                d = [dd.strip() for dd in d]
+            except:
+                print('missing data file')
+            self.datafiles = d
+
         self.compile()
 
         if watch:
-            print('here')
             files = [self.tikzfile]
             if preamblefile is not None:
                 files.append(self.preamblefile)
@@ -77,6 +87,11 @@ class tikz(object):
             with open(texfile, "w") as f:
                 f.write(self.latex)
 
+            # copy data
+            for f in self.datafiles:
+                print(f)
+                shutil.copy(f, os.path.join(d, f))
+
             # compile latex
             output = subprocess.call(["latexmk", "-pdf", "-cd", "-halt-on-error", texfile])
 
@@ -107,7 +122,13 @@ class Watcher(object):
     # Look for changes
     def look(self):
         for i in range(len(self.filenames)):
-            stamp = os.stat(self.filenames[i]).st_mtime
+            attempt = 0
+            while attempt < 5:
+                try:
+                    stamp = os.stat(self.filenames[i]).st_mtime
+                    attempt = 5
+                except FileNotFoundError:
+                    attempt += 1
             if stamp != self._cached_stamps[i]:
                 self._cached_stamps[i] = stamp
                 # File has changed, so do something...
@@ -137,13 +158,14 @@ def main():
     parser = argparse.ArgumentParser(description="tikzpdf - a script for tikz picture development")
     parser.add_argument("tikzfile", help="tikz file", metavar="example.tikz")
     parser.add_argument("-p", "--preamble", default=None, help="latex preamble", metavar="preamble.tex")
+    parser.add_argument("-d", "--data", default=None, help="additional data files", metavar="data.txt")
     parser.add_argument("-w", "--watch", action="store_true", default=False, help="recompile on change")
     parser.add_argument("-v", "--view", action="store_true", default=False, help="open viewer")
     parser.add_argument("--viewer", default='open', help="viewer executable")
 
     args = parser.parse_args()
 
-    T = tikz(args.tikzfile, args.preamble, args.watch, args.view, args.viewer)
+    T = tikz(args.tikzfile, args.preamble, args.data, args.watch, args.view, args.viewer)
 
 
 if __name__ == "__main__":
