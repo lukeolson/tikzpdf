@@ -122,13 +122,13 @@ class Watcher(object):
     # Look for changes
     def look(self):
         for i in range(len(self.filenames)):
-            attempt = 0
-            while attempt < 5:
+            notfound = True
+            while notfound:
                 try:
                     stamp = os.stat(self.filenames[i]).st_mtime
-                    attempt = 5
+                    notfound = False
                 except FileNotFoundError:
-                    attempt += 1
+                    print('attempting to find')
             if stamp != self._cached_stamps[i]:
                 self._cached_stamps[i] = stamp
                 # File has changed, so do something...
