@@ -16,6 +16,8 @@ import shutil
 import tempfile
 import subprocess
 
+import re
+
 
 class tikz(object):
     def __init__(self, tikzfile, preamblefile, datafile, watch, view, viewer):
@@ -25,10 +27,10 @@ class tikz(object):
         self.view = view
         self.viewer = viewer
 
-        self.tikzpicture = ""
-        self.preamble = ""
-
+        self.tikzpicture = ''
+        self.preamble = ''
         self.datafiles = []
+
         if datafile is not None:
             try:
                 with open(datafile, 'r') as f:
@@ -36,7 +38,7 @@ class tikz(object):
                 d = [dd.strip() for dd in d]
             except:
                 print('missing data file')
-            self.datafiles = d
+            self.datafiles += d
 
         self.compile()
 
@@ -47,14 +49,61 @@ class tikz(object):
             watcher = Watcher(files, self.compile)
             watcher.watch()
 
+    def reset_data(self):
+        self.tikzpicture = ''
+        self.preamble = ''
+        self.datafiles = []
+
     def read_tikz(self):
         with open(self.tikzfile, 'r') as f:
             self.tikzpicture = f.read()
 
+    def check_tikz_for_usetikzlibrary(self):
+        r"""
+        Check for
+        %\usetikzlibrary{calc,decorations.pathreplacing,shapes.misc}
+        at the start of the line
+        """
+        if not self.tikzpicture:
+            return
+
+        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage)')
+        tikz = self.tikzpicture.split('\n')
+        for t in tikz:
+            result = c.match(t)
+            if(result):
+                self.preamble += t[1:] + '\n'
+
+    def check_tikz_for_input(self):
+        r"""
+        check for
+        \input{something}
+        at the start of the line
+
+        assumes one per \input
+        assumes no subdirectory
+        """
+        newdatafiles = []
+        if not self.tikzpicture:
+            return
+
+        c = re.compile(r'^\\input{(.*)}')
+        tikz = self.tikzpicture.split('\n')
+        for t in tikz:
+            result = c.match(t)
+            if(result):
+                filename = result.group(1)
+                if '/' in filename:
+                    raise ValueError('Expecting only filenames...')
+                if ',' in filename:
+                    raise ValueError('Expecting only one filename...')
+                newdatafiles.append(filename.strip())
+        self.datafiles += newdatafiles
+
     def read_preamble(self):
         if self.preamblefile is not None:
             with open(self.preamblefile, 'r') as f:
-                self.preamble = f.read()
+                self.preamble += f.read()
 
     def set_latex(self):
 
@@ -76,7 +125,10 @@ class tikz(object):
                       r"""\end{document}""")
 
     def compile(self):
+        self.reset_data()
         self.read_tikz()
+        self.check_tikz_for_usetikzlibrary()
+        self.check_tikz_for_input()
         self.read_preamble()
         self.set_latex()
 
