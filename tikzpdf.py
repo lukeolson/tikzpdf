@@ -58,7 +58,7 @@ class tikz(object):
         with open(self.tikzfile, 'r') as f:
             self.tikzpicture = f.read()
 
-    def check_tikz_for_usetikzlibrary(self):
+    def check_tikz_for_extras(self):
         r"""
         Check for
         %\usetikzlibrary{calc,decorations.pathreplacing,shapes.misc}
@@ -67,7 +67,7 @@ class tikz(object):
         if not self.tikzpicture:
             return
 
-        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage)')
+        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage|\\newcommand)')
         tikz = self.tikzpicture.split('\n')
         for t in tikz:
             result = c.match(t)
@@ -127,7 +127,7 @@ class tikz(object):
     def compile(self):
         self.reset_data()
         self.read_tikz()
-        self.check_tikz_for_usetikzlibrary()
+        self.check_tikz_for_extras()
         self.check_tikz_for_input()
         self.read_preamble()
         self.set_latex()
