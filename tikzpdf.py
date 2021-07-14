@@ -30,6 +30,7 @@ class tikz(object):
         self.tikzpicture = ''
         self.preamble = ''
         self.datafiles = []
+        self.inputfiles = []
 
         if datafile is not None:
             try:
@@ -53,6 +54,7 @@ class tikz(object):
         self.tikzpicture = ''
         self.preamble = ''
         self.datafiles = []
+        self.inputfiles = []
 
     def read_tikz(self):
         with open(self.tikzfile, 'r') as f:
@@ -77,8 +79,10 @@ class tikz(object):
     def check_tikz_for_input(self):
         r"""
         check for
-        \input{something}
+        %\input{something}
         at the start of the line
+
+        Since nesting inputs will not work, we look for this input in the comments.
 
         assumes one per \input
         assumes no subdirectory
@@ -87,7 +91,7 @@ class tikz(object):
         if not self.tikzpicture:
             return
 
-        c = re.compile(r'^\\input{(.*)}')
+        c = re.compile(r'^%\\input{(.*)}')
         tikz = self.tikzpicture.split('\n')
         for t in tikz:
             result = c.match(t)
@@ -98,6 +102,7 @@ class tikz(object):
                 if ',' in filename:
                     raise ValueError('Expecting only one filename...')
                 newdatafiles.append(filename.strip())
+                self.preamble += result.group(0)[1:]
         self.datafiles += newdatafiles
 
     def read_preamble(self):
@@ -141,8 +146,7 @@ class tikz(object):
 
             # copy data
             for f in self.datafiles:
-                print(f)
-                shutil.copy(f, os.path.join(d, f))
+                shutil.copy(f, os.path.join(d, f), follow_symlinks=True)
 
             # compile latex
             output = subprocess.call(["latexmk", "-pdf", "-cd", "-halt-on-error", texfile])
