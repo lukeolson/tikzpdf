@@ -69,12 +69,40 @@ class tikz(object):
         if not self.tikzpicture:
             return
 
-        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage|\\newcommand)')
+        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage|\\newcommand|\\renewcommand)')
         tikz = self.tikzpicture.split('\n')
         for t in tikz:
             result = c.match(t)
-            if(result):
+            if result:
                 self.preamble += t[1:] + '\n'
+
+    def check_tikz_for_extrafiles(self):
+        r"""
+        check for
+        %extra: somefile.dat
+        at the start of the line
+        this will copy the data file into the compile directory
+        %extra: somefile.dat, somepath/somefile.dat
+        will copy the file somefile.dat to somepath/somefile.dat in the build directory
+        """
+        newdatafiles = []
+        if not self.tikzpicture:
+            return
+
+        c1 = re.compile(r'^%extra:(.*),(.*)')
+        c2 = re.compile(r'^%extra:(.*)')
+        tikz = self.tikzpicture.split('\n')
+        for t in tikz:
+            result = c1.match(t)
+            if not result:
+                result = c2.match(t)
+            if result:
+                filename = result.group(1).strip()
+                newfilename = result.group(2).strip()
+                if not os.path.isfile(filename):
+                    raise ValueError('Expecting only filenames...')
+                newdatafiles.append((filename, newfilename))
+        self.datafiles += newdatafiles
 
     def check_tikz_for_input(self):
         r"""
@@ -134,6 +162,7 @@ class tikz(object):
         self.read_tikz()
         self.check_tikz_for_extras()
         self.check_tikz_for_input()
+        self.check_tikz_for_extrafiles()
         self.read_preamble()
         self.set_latex()
 
@@ -146,7 +175,11 @@ class tikz(object):
 
             # copy data
             for f in self.datafiles:
-                shutil.copy(f, os.path.join(d, f), follow_symlinks=True)
+                if type(f) == tuple:
+                    os.makedirs(os.path.join(d,os.path.dirname(f[1])), exist_ok=True)
+                    shutil.copy(f[0], os.path.join(d, f[1]), follow_symlinks=True)
+                else:
+                    shutil.copy(f, os.path.join(d, f), follow_symlinks=True)
 
             # compile latex
             output = subprocess.call(["latexmk", "-pdf", "-cd", "-halt-on-error", texfile])
