@@ -69,7 +69,7 @@ class tikz(object):
         if not self.tikzpicture:
             return
 
-        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage|\\newcommand|\\renewcommand)')
+        c = re.compile(r'^%(\\usetikzlibrary|\\usepackage|\\newcommand|\\renewcommand|\\pgfplotsset)')
         tikz = self.tikzpicture.split('\n')
         for t in tikz:
             result = c.match(t)
@@ -98,10 +98,13 @@ class tikz(object):
                 result = c2.match(t)
             if result:
                 filename = result.group(1).strip()
-                newfilename = result.group(2).strip()
+                if len(result.groups())>1:
+                    newfilename = result.group(2).strip()
+                    newdatafiles.append((filename, newfilename))
+                else:
+                    newdatafiles.append(filename)
                 if not os.path.isfile(filename):
-                    raise ValueError('Expecting only filenames...')
-                newdatafiles.append((filename, newfilename))
+                    raise ValueError(f'Expecting only filenames... ({filename})')
         self.datafiles += newdatafiles
 
     def check_tikz_for_input(self):
@@ -182,6 +185,7 @@ class tikz(object):
                     shutil.copy(f, os.path.join(d, f), follow_symlinks=True)
 
             # compile latex
+            output = subprocess.call(["ls", "-l", d])
             output = subprocess.call(["latexmk", "-pdf", "-cd", "-halt-on-error", texfile])
 
             # copy pdf
